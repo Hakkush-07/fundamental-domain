@@ -1,0 +1,16 @@
+\documentclass{article}
+
+\usepackage{tikz}
+
+\begin{document}
+
+\begin{center}
+\begin{tikzpicture}[scale=3]
+FUNDAMENTAL_DOMAIN
+\draw[-latex] (-MAX_WIDTH-0.5,0) -- (MAX_WIDTH+0.5,0)node[below]{Re};
+\draw[-latex] (0,0) -- (0,MAX_HEIGHT+0.5)node[right]{Im};
+\path(-1,0) --node[below, pos=0]{$-1$}node[below right, pos=.5]{0}node[below, pos=1]{1} (1,0) (0,1)node[below right]{$i$};
+\end{tikzpicture}
+\end{center}
+
+\end{document}

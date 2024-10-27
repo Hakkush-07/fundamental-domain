@@ -1,0 +1,2 @@
+MAX_HEIGHT = 3.0
+EPSILON = 10**-4
