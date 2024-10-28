@@ -61,15 +61,13 @@ class SL2Z:
 
 # representative of a coset of gamma
 class CosetRepresentative:
-    def __init__(self, matrix, distance=0):
+    def __init__(self, matrix, distance=0, name=""):
         self.matrix = matrix
-        self.t_direction = False
-        self.t_inv_direction = False
-        self.s_direction = False
-        self.m_index_t_direction = None
-        self.m_index_t_inv_direction = None
-        self.m_index_s_direction = None
         self.distance = distance
+        self.name = name
+        self.t = None
+        self.t_inv = None
+        self.s = None
     
     # corners of the fundamental domain of SL_2(Z)
     @staticmethod
@@ -87,14 +85,14 @@ class CosetRepresentative:
         return sum(y_coordinates) / 3
     
     # asymptote code to draw this, also returns information about the size of the figure
-    def to_asy(self):
+    def to_asy(self, label=False):
         A = self.coset()
-        return HyperbolicTriangle(*A), max([abs(a.x) for a in A if not a.is_infinity()])
+        return HyperbolicTriangle(*A).to_asy(label=self.name if label else None), max([abs(a.x) for a in A if not a.is_infinity()])
     
     # latex/tikz code to draw this, also returns information about the size of the figure
-    def to_tex(self):
+    def to_tex(self, label=False):
         A = self.coset()
-        return HyperbolicTriangle(*A), max([abs(a.x) for a in A if not a.is_infinity()])    
+        return HyperbolicTriangle(*A).to_tex(label=self.name if label else None), max([abs(a.x) for a in A if not a.is_infinity()])    
     
 # subgroup of SL_2(Z), takes a function checking if a given element is a member of the group or not
 class Gamma:
@@ -103,97 +101,80 @@ class Gamma:
     
     def equiv(self, a, b):
         return self.membership_check(a * b.inv())
+
+    @staticmethod
+    def sl2z():
+        return Gamma(lambda m: True)
+
+    @staticmethod
+    def gamma_0_n(n):
+        return Gamma(lambda m: m.c % n == 0)
     
-    # this randomly tries going in the T/T^-1/S directions from a randomly chosen element, can be modified to get better looking results
+    @staticmethod
+    def gamma_1_n(n):
+        return Gamma(lambda m: m.a % n == 1 and m.c % n == 0 and m.d % n == 1)
     
-    # get fundamental domain step by step, can modify what to choose next
-    def get_fundamental_domain(self, choice_function=None):
+    @staticmethod
+    def gamma_n(n):
+        return Gamma(lambda m: m.a % n == 1 and m.b % n == 0 and m.c % n == 0 and m.d % n == 1)
+    
+    def get_fundamental_domain(self, choice_function):
         coset_representatives = [CosetRepresentative(SL2Z.identity())]
         while True:
-            # check t/t_inv/s direction to see if they are already included
+            possible_options = []
             for cri, cr in enumerate(coset_representatives):
                 # t direction
-                if not cr.t_direction:
+                if cr.t is None:
                     mt = cr.matrix * SL2Z.t()
                     for crki, crk in enumerate(coset_representatives):
-                        if crki == cri:
-                            continue
                         if self.equiv(mt, crk.matrix):
-                            cr.t_direction = True
-                            cr.m_index_t_direction = crki
-                            crk.t_inv_direction = True
-                            crk.m_index_t_inv_direction = cri
-
+                            cr.t = crki
+                            crk.t_inv = cri
+                    if cr.t is None:
+                        crn = CosetRepresentative(mt, cr.distance + 1, cr.name + "T")
+                        crn.t_inv = cri
+                        possible_options.append(crn)
+                
                 # t_inv direction
-                if not cr.t_inv_direction:
+                if cr.t_inv is None:
                     mt_inv = cr.matrix * SL2Z.t().inv()
                     for crki, crk in enumerate(coset_representatives):
-                        if crki == cri:
-                            continue
                         if self.equiv(mt_inv, crk.matrix):
-                            cr.t_inv_direction = True
-                            cr.m_index_t_inv_direction = crki
-                            crk.t_direction = True
-                            crk.m_index_t_direction = cri
+                            cr.t_inv = crki
+                            crk.t = cri
+                    if cr.t_inv is None:
+                        crn = CosetRepresentative(mt_inv, cr.distance + 1, cr.name + "T^{-1}")
+                        crn.t = cri
+                        possible_options.append(crn)
                 
                 # s direction
-                if not cr.s_direction:
+                if cr.s is None:
                     ms = cr.matrix * SL2Z.s()
                     for crki, crk in enumerate(coset_representatives):
-                        if crki == cri:
-                            continue
                         if self.equiv(ms, crk.matrix):
-                            cr.s_direction = True
-                            cr.m_index_s_direction = crki
-                            crk.s_direction = True
-                            crk.m_index_s_direction = cri
-
-            possible_options = []
-            # get possible options for the new element
-            for cri, cr in enumerate(coset_representatives):
-                # t direction
-                if not cr.t_direction:
-                    mt = cr.matrix * SL2Z.t()
-                    possible_options.append((cri, cr, "T", CosetRepresentative(mt, cr.distance + 1)))
-                    
-                # t_inv direction
-                if not cr.t_inv_direction:
-                    mt_inv = cr.matrix * SL2Z.t().inv()
-                    possible_options.append((cri, cr, "T_inv", CosetRepresentative(mt_inv, cr.distance + 1)))
-                    
-                # s direction
-                if not cr.s_direction:
-                    ms = cr.matrix * SL2Z.s()
-                    possible_options.append((cri, cr, "S", CosetRepresentative(ms, cr.distance + 1)))
-            
-            # choose one of the possible options
+                            cr.s = crki
+                            crk.s = cri
+                    if cr.s is None:
+                        crn = CosetRepresentative(ms, cr.distance + 1, cr.name + "S")
+                        crn.s = cri
+                        possible_options.append(crn)
             if not possible_options:
                 break
-            cri, cr, typ, crn = max(possible_options, key=choice_function)
-            if typ == "T":
-                crn.t_inv_direction = True
-                crn.m_index_t_inv_direction = cri
-            elif typ == "T_inv":
-                crn.t_direction = True
-                crn.m_index_t_direction = cri
-            elif typ == "S":
-                crn.s_direction = True
-                crn.m_index_s_direction = cri
-            coset_representatives.append(crn)
+            coset_representatives.append(max(possible_options, key=choice_function))
         return coset_representatives
 
 # asymptote code to draw fundamental domain
-def fundamental_domain_to_asy(cosets):
+def fundamental_domain_to_asy(cosets, label=False):
     with open("templates/template.asy", "r+") as file:
         template = file.read()
-    lst = [cr.to_asy() for cr in cosets]
-    return template.replace("FUNDAMENTAL_DOMAIN", "".join([k[0].to_asy() for k in lst])).replace("MAX_HEIGHT", str(MAX_HEIGHT)).replace("MAX_WIDTH", str(max([k[1] for k in lst])))
+    lst = [cr.to_asy(label) for cr in cosets]
+    return template.replace("FUNDAMENTAL_DOMAIN", "".join([k[0] for k in lst])).replace("MAX_HEIGHT", str(MAX_HEIGHT)).replace("MAX_WIDTH", str(max([k[1] for k in lst])))
 
 # latex/tikz code to draw fundamental domain
-def fundamental_domain_to_tex(cosets):
+def fundamental_domain_to_tex(cosets, label=False):
     with open("templates/template.tex", "r+") as file:
         template = file.read()
-    lst = [cr.to_tex() for cr in cosets]
-    return template.replace("FUNDAMENTAL_DOMAIN", "".join([k[0].to_tex() for k in lst])).replace("MAX_HEIGHT", str(MAX_HEIGHT)).replace("MAX_WIDTH", str(max([k[1] for k in lst])))
+    lst = [cr.to_tex(label) for cr in cosets]
+    return template.replace("FUNDAMENTAL_DOMAIN", "".join([k[0] for k in lst])).replace("MAX_HEIGHT", str(MAX_HEIGHT)).replace("MAX_WIDTH", str(max([k[1] for k in lst])))
 
     

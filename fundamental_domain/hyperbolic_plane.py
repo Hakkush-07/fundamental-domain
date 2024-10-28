@@ -143,21 +143,25 @@ class HyperbolicTriangle:
         self.z1, self.z2, self.z3 = z1, z2, z3
 
     # asymptote code to draw this
-    def to_asy(self):
+    def to_asy(self, label=None):
         a, b, c = self.z1, self.z2, self.z3
         if a.is_infinity():
             c, a = a, c
         if b.is_infinity():
             b, c = c, b
+        x = (a.x + b.x) / 2 if c.is_infinity() else (a.x + b.x + c.x) / 3
+        y = sum(map(lambda u: MAX_HEIGHT if u is None else u, (a.y, b.y, c.y))) / 3
         linewidth = "linewidth(1.5pt)"
         # return f"filldraw((0, 0) -- (5, 0) -- (0, 5) -- cycle, grey, {linewidth});\n"
-        return f"fill({HyperbolicLine(c, a).to_asy(mod=1)} {HyperbolicLine(a, b).to_asy(mod=2)} {HyperbolicLine(b, c).to_asy(mod=2)} -- cycle, RGB(204, 204, 204));\n" + f"draw({HyperbolicLine(c, a).to_asy(mod=1)} {HyperbolicLine(a, b).to_asy(mod=2)} {HyperbolicLine(b, c).to_asy(mod=2)}, {linewidth});\n"
+        return f"fill({HyperbolicLine(c, a).to_asy(mod=1)} {HyperbolicLine(a, b).to_asy(mod=2)} {HyperbolicLine(b, c).to_asy(mod=2)} -- cycle, RGB(204, 204, 204));\n" + f"draw({HyperbolicLine(c, a).to_asy(mod=1)} {HyperbolicLine(a, b).to_asy(mod=2)} {HyperbolicLine(b, c).to_asy(mod=2)}, {linewidth});\n" + ("" if label is None else f"label(\"\\tiny ${label}$\",({x}, {y}));\n")
     
     # latex/tikz code to draw this
-    def to_tex(self):
+    def to_tex(self, label=None):
         a, b, c = self.z1, self.z2, self.z3
         if a.is_infinity():
             c, a = a, c
         if b.is_infinity():
             b, c = c, b
-        return f"\\draw[very thick,fill=gray!30] {HyperbolicLine(c, a).to_tex(mod=1)} {HyperbolicLine(a, b).to_tex(mod=2)} {HyperbolicLine(b, c).to_tex(mod=2)};\n"
+        x = (a.x + b.x) / 2 if c.is_infinity() else (a.x + b.x + c.x) / 3
+        y = sum(map(lambda u: MAX_HEIGHT if u is None else u, (a.y, b.y, c.y))) / 3
+        return f"\\draw[very thick,fill=gray!30] {HyperbolicLine(c, a).to_tex(mod=1)} {HyperbolicLine(a, b).to_tex(mod=2)} {HyperbolicLine(b, c).to_tex(mod=2)};\n" + ("" if label is None else f"\\node[] at ({x}, {y}) {{\\tiny ${label}$}};\n")
